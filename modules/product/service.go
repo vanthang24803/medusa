@@ -13,6 +13,10 @@ type ListQuery struct {
 	types.PaginationQuery
 	Status       string `form:"status"`
 	CollectionID string `form:"collection_id"`
+	TypeID       string `form:"type_id"`
+	BrandID      string `form:"brand_id"`
+	IsFeatured   *bool  `form:"is_featured"`
+	Sort         string `form:"sort"`
 	Search       string `form:"q"`
 }
 
@@ -29,13 +33,21 @@ type Service interface {
 
 // CreateInput — payload for creating a product (validated in handler/dto).
 type CreateInput struct {
-	Title        string
-	Subtitle     *string
-	Description  *string
-	Handle       string
-	Thumbnail    *string
-	Status       ProductStatus
-	CollectionID *string
+	Title          string
+	Subtitle       *string
+	Description    *string
+	Handle         string
+	Thumbnail      *string
+	Status         ProductStatus
+	CollectionID   *string
+	TypeID         *string
+	BrandID        *string
+	Author         *string
+	ISBN           *string
+	PageCount      *int
+	CompareAtPrice *int64
+	Quantity       *int
+	IsFeatured     bool
 }
 
 type CreateVariantInput struct {
@@ -73,6 +85,23 @@ func (s *service) GetByID(ctx context.Context, id string) (*Product, error) {
 		return nil, err
 	}
 	p.Variants = variants
+	images, err := s.repo.ListImages(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	p.Images = images
+	opts, err := s.repo.ListOptions(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	p.Options = opts
+	if p.BrandID != nil {
+		brand, err := s.repo.GetBrand(ctx, *p.BrandID)
+		if err != nil {
+			return nil, err
+		}
+		p.Brand = brand
+	}
 	return p, nil
 }
 
@@ -93,18 +122,26 @@ func (s *service) Create(ctx context.Context, in CreateInput) (*Product, error) 
 	}
 	now := time.Now().UTC()
 	p := &Product{
-		ID:           types.GenerateID("prod"),
-		Title:        in.Title,
-		Subtitle:     in.Subtitle,
-		Description:  in.Description,
-		Handle:       in.Handle,
-		Status:       status,
-		Thumbnail:    in.Thumbnail,
-		Discountable: true,
-		CollectionID: in.CollectionID,
-		Metadata:     []byte("{}"),
-		CreatedAt:    now,
-		UpdatedAt:    now,
+		ID:             types.GenerateID("prod"),
+		Title:          in.Title,
+		Subtitle:       in.Subtitle,
+		Description:    in.Description,
+		Handle:         in.Handle,
+		Status:         status,
+		Thumbnail:      in.Thumbnail,
+		Discountable:   true,
+		CollectionID:   in.CollectionID,
+		TypeID:         in.TypeID,
+		BrandID:        in.BrandID,
+		Author:         in.Author,
+		ISBN:           in.ISBN,
+		PageCount:      in.PageCount,
+		CompareAtPrice: in.CompareAtPrice,
+		Quantity:       in.Quantity,
+		IsFeatured:     in.IsFeatured,
+		Metadata:       []byte("{}"),
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
 	if err := s.repo.Insert(ctx, p); err != nil {
 		return nil, err

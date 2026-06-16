@@ -21,8 +21,9 @@ func NewRepository(database *db.DB) *Repository {
 
 const productColumns = `id, title, subtitle, description, handle, is_giftcard, status,
 	thumbnail, weight, length, height, width, origin_country, hs_code, mid_code,
-	material, discountable, external_id, collection_id, type_id, metadata,
-	created_at, updated_at, deleted_at`
+	material, discountable, external_id, collection_id, type_id, brand_id,
+	author, isbn, page_count, compare_at_price, quantity, rating, review_count,
+	is_featured, published_at, metadata, created_at, updated_at, deleted_at`
 
 // Insert creates a new product.
 func (r *Repository) Insert(ctx context.Context, p *Product) error {
@@ -31,6 +32,8 @@ func (r *Repository) Insert(ctx context.Context, p *Product) error {
 		VALUES (:id, :title, :subtitle, :description, :handle, :is_giftcard, :status,
 			:thumbnail, :weight, :length, :height, :width, :origin_country, :hs_code,
 			:mid_code, :material, :discountable, :external_id, :collection_id, :type_id,
+			:brand_id, :author, :isbn, :page_count, :compare_at_price, :quantity,
+			:rating, :review_count, :is_featured, :published_at,
 			:metadata, :created_at, :updated_at, :deleted_at)`, productColumns)
 	_, err := r.db.Writer(ctx).NamedExec(query, p)
 	return err
@@ -74,9 +77,36 @@ func (r *Repository) List(ctx context.Context, q ListQuery) ([]Product, int, err
 		where += ` AND collection_id = :collection_id`
 		args["collection_id"] = q.CollectionID
 	}
+	if q.TypeID != "" {
+		where += ` AND type_id = :type_id`
+		args["type_id"] = q.TypeID
+	}
+	if q.BrandID != "" {
+		where += ` AND brand_id = :brand_id`
+		args["brand_id"] = q.BrandID
+	}
+	if q.IsFeatured != nil {
+		where += ` AND is_featured = :is_featured`
+		args["is_featured"] = *q.IsFeatured
+	}
 	if q.Search != "" {
-		where += ` AND title ILIKE :search`
+		where += ` AND (title ILIKE :search OR author ILIKE :search)`
 		args["search"] = "%" + q.Search + "%"
+	}
+
+	// Sort
+	orderBy := `ORDER BY created_at DESC`
+	switch q.Sort {
+	case "price_asc":
+		orderBy = `ORDER BY compare_at_price ASC NULLS LAST`
+	case "price_desc":
+		orderBy = `ORDER BY compare_at_price DESC NULLS LAST`
+	case "rating":
+		orderBy = `ORDER BY rating DESC NULLS LAST`
+	case "newest":
+		orderBy = `ORDER BY published_at DESC NULLS LAST`
+	case "title":
+		orderBy = `ORDER BY title ASC`
 	}
 
 	// Count
@@ -91,7 +121,7 @@ func (r *Repository) List(ctx context.Context, q ListQuery) ([]Product, int, err
 	args["limit"] = q.Limit()
 	args["offset"] = q.Offset()
 	listQ := fmt.Sprintf(`SELECT %s FROM product.product %s
-		ORDER BY created_at DESC LIMIT :limit OFFSET :offset`, productColumns, where)
+		%s LIMIT :limit OFFSET :offset`, productColumns, where, orderBy)
 	bound, bargs, _ := r.db.Reader(ctx).BindNamed(listQ, args)
 
 	products := []Product{}
@@ -134,4 +164,34 @@ func (r *Repository) ListVariants(ctx context.Context, productID string) ([]Prod
 		 FROM product.product_variant
 		 WHERE product_id = $1 AND deleted_at IS NULL ORDER BY rank`, productID)
 	return variants, err
+}
+
+// ── Brand join ──────────────────────────────────────────────────────────────
+
+func (r *Repository) GetBrand(ctx context.Context, brandID string) (*BrandRef, error) {
+	var b BrandRef
+	err := r.db.Reader(ctx).GetContext(ctx, &b,
+		`SELECT id, name, slug, logo_url FROM brand.brand WHERE id = $1 AND deleted_at IS NULL`, brandID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	return &b, err
+}
+
+func (r *Repository) ListImages(ctx context.Context, productID string) ([]ProductImage, error) {
+	var imgs []ProductImage
+	err := r.db.Reader(ctx).SelectContext(ctx, &imgs,
+		`SELECT id, product_id, url, rank, created_at, updated_at
+		 FROM product.product_image
+		 WHERE product_id = $1 ORDER BY rank`, productID)
+	return imgs, err
+}
+
+func (r *Repository) ListOptions(ctx context.Context, productID string) ([]ProductOption, error) {
+	var opts []ProductOption
+	err := r.db.Reader(ctx).SelectContext(ctx, &opts,
+		`SELECT id, product_id, title, rank, created_at, updated_at
+		 FROM product.product_option
+		 WHERE product_id = $1 ORDER BY rank`, productID)
+	return opts, err
 }
