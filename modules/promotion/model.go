@@ -26,21 +26,21 @@ type Promotion struct {
 	ID          string          `db:"id" json:"id"`
 	Code        string          `db:"code" json:"code"`
 	Type        PromotionType   `db:"type" json:"type"`
-	IsAutomatic bool            `db:"is_automatic" json:"is_automatic"`
+	IsAutomatic bool            `db:"is_automatic" json:"isAutomatic"`
 	Status      PromotionStatus `db:"status" json:"status"`
-	CampaignID  *string         `db:"campaign_id" json:"campaign_id"`
-	CreatedAt   time.Time       `db:"created_at" json:"created_at"`
-	UpdatedAt   time.Time       `db:"updated_at" json:"updated_at"`
+	CampaignID  *string         `db:"campaign_id" json:"campaignId"`
+	CreatedAt   time.Time       `db:"created_at" json:"createdAt"`
+	UpdatedAt   time.Time       `db:"updated_at" json:"updatedAt"`
 }
 
 type PromotionRule struct {
 	ID          string       `db:"id" json:"id"`
-	PromotionID string       `db:"promotion_id" json:"promotion_id"`
+	PromotionID string       `db:"promotion_id" json:"promotionId"`
 	Attribute   string       `db:"attribute" json:"attribute"`
 	Operator    RuleOperator `db:"operator" json:"operator"`
 	Values      string       `db:"values" json:"values"` // JSON array string
-	CreatedAt   time.Time    `db:"created_at" json:"created_at"`
-	UpdatedAt   time.Time    `db:"updated_at" json:"updated_at"`
+	CreatedAt   time.Time    `db:"created_at" json:"createdAt"`
+	UpdatedAt   time.Time    `db:"updated_at" json:"updatedAt"`
 }
 
 type Campaign struct {
@@ -48,10 +48,10 @@ type Campaign struct {
 	Name        string     `db:"name" json:"name"`
 	Description *string    `db:"description" json:"description"`
 	Identifier  string     `db:"identifier" json:"identifier"`
-	StartsAt    *time.Time `db:"starts_at" json:"starts_at"`
-	EndsAt      *time.Time `db:"ends_at" json:"ends_at"`
-	CreatedAt   time.Time  `db:"created_at" json:"created_at"`
-	UpdatedAt   time.Time  `db:"updated_at" json:"updated_at"`
+	StartsAt    *time.Time `db:"starts_at" json:"startsAt"`
+	EndsAt      *time.Time `db:"ends_at" json:"endsAt"`
+	CreatedAt   time.Time  `db:"created_at" json:"createdAt"`
+	UpdatedAt   time.Time  `db:"updated_at" json:"updatedAt"`
 }
 
 type CampaignBudgetType string
@@ -63,10 +63,10 @@ const (
 
 type CampaignBudget struct {
 	ID         string             `db:"id" json:"id"`
-	CampaignID string             `db:"campaign_id" json:"campaign_id"`
+	CampaignID string             `db:"campaign_id" json:"campaignId"`
 	Type       CampaignBudgetType `db:"type" json:"type"`
 	Limit      *int64             `db:"budget_limit" json:"limit"`
 	Used       int64              `db:"used" json:"used"`
-	CreatedAt  time.Time          `db:"created_at" json:"created_at"`
-	UpdatedAt  time.Time          `db:"updated_at" json:"updated_at"`
+	CreatedAt  time.Time          `db:"created_at" json:"createdAt"`
+	UpdatedAt  time.Time          `db:"updated_at" json:"updatedAt"`
 }

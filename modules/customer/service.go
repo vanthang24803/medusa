@@ -6,10 +6,9 @@ import (
 	"ecommerce/packages/events"
 )
 
-// Service — contract cho customer domain.
-// STUB: skeleton structure; add methods when fully implemented.
 type Service interface {
 	Ping(ctx context.Context) error
+	GetProfile(ctx context.Context, id string) (*Customer, error)
 }
 
 type service struct {
@@ -21,7 +20,10 @@ func NewService(repo *Repository, bus events.EventBus) Service {
 	return &service{repo: repo, bus: bus}
 }
 
-// Ping — placeholder to verify wiring; replace with real business methods.
 func (s *service) Ping(ctx context.Context) error {
 	return s.repo.Ping(ctx)
+}
+
+func (s *service) GetProfile(ctx context.Context, id string) (*Customer, error) {
+	return s.repo.GetByID(ctx, id)
 }

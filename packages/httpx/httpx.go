@@ -6,6 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
+	"reflect"
+	"strconv"
 	"time"
 
 	"ecommerce/packages/types"
@@ -177,6 +180,69 @@ func statusForCode(code string) int {
 func DecodeJSON(r *http.Request, dst any) error {
 	if err := json.NewDecoder(r.Body).Decode(dst); err != nil {
 		return types.NewValidation("invalid JSON body")
+	}
+	return nil
+}
+
+// DecodeQuery parses URL query params into dst using reflection.
+// Supports form tags on struct fields (e.g. `form:"page"`).
+func DecodeQuery(r *http.Request, dst any) error {
+	values := r.URL.Query()
+	return decodeValues(values, dst)
+}
+
+func decodeValues(values url.Values, dst any) error {
+	rv := reflect.ValueOf(dst)
+	if rv.Kind() != reflect.Ptr || rv.Elem().Kind() != reflect.Struct {
+		return types.NewValidation("decode target must be a pointer to struct")
+	}
+	rv = rv.Elem()
+	rt := rv.Type()
+
+	for i := 0; i < rt.NumField(); i++ {
+		field := rt.Field(i)
+		fieldVal := rv.Field(i)
+
+		tag := field.Tag.Get("form")
+		if tag == "" || tag == "-" {
+			continue
+		}
+
+		raw, ok := values[tag]
+		if !ok || len(raw) == 0 {
+			continue
+		}
+		val := raw[0]
+
+		switch fieldVal.Kind() {
+		case reflect.String:
+			fieldVal.SetString(val)
+		case reflect.Int, reflect.Int64:
+			if n, err := strconv.ParseInt(val, 10, 64); err == nil {
+				fieldVal.SetInt(n)
+			}
+		case reflect.Float64:
+			if f, err := strconv.ParseFloat(val, 64); err == nil {
+				fieldVal.SetFloat(f)
+			}
+		case reflect.Bool:
+			if b, err := strconv.ParseBool(val); err == nil {
+				fieldVal.SetBool(b)
+			}
+		case reflect.Ptr:
+			switch fieldVal.Type().Elem().Kind() {
+			case reflect.String:
+				fieldVal.Set(reflect.ValueOf(&val))
+			case reflect.Int:
+				if n, err := strconv.Atoi(val); err == nil {
+					fieldVal.Set(reflect.ValueOf(&n))
+				}
+			case reflect.Int64:
+				if n, err := strconv.ParseInt(val, 10, 64); err == nil {
+					fieldVal.Set(reflect.ValueOf(&n))
+				}
+			}
+		}
 	}
 	return nil
 }

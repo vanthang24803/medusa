@@ -7,12 +7,12 @@ type CreateProductReq struct {
 	Handle       string  `json:"handle"`
 	Thumbnail    *string `json:"thumbnail"`
 	Status       string  `json:"status"`
-	CollectionID *string `json:"collection_id"`
+	CollectionID *string `json:"collectionId"`
 }
 
 type CreateVariantReq struct {
 	Title           string  `json:"title"`
 	SKU             *string `json:"sku"`
-	ManageInventory bool    `json:"manage_inventory"`
-	AllowBackorder  bool    `json:"allow_backorder"`
+	ManageInventory bool    `json:"manageInventory"`
+	AllowBackorder  bool    `json:"allowBackorder"`
 }
