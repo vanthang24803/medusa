@@ -20,6 +20,7 @@ import (
 	"ecommerce/modules/cart"
 	"ecommerce/modules/customer"
 	"ecommerce/modules/fulfillment"
+	"ecommerce/modules/iam"
 	"ecommerce/modules/identity"
 	"ecommerce/modules/inventory"
 	"ecommerce/modules/notification"
@@ -94,16 +95,20 @@ func wireModules(database *db.DB, bus events.EventBus, cfg *config.Config, log *
 		SecretAccessKey: cfg.UploadSecretKey,
 		UseSSL:          cfg.UploadSSL,
 		PublicURL:       cfg.UploadPublicURL,
+		BucketName:      cfg.UploadBucket,
 	})
 	if err != nil {
 		log.Warn("upload provider unavailable; avatar uploads disabled", zap.Error(err))
 		uploader = upload.NewNopUploader()
 	}
 
+	authRepo := auth.NewRepository(database)
 	custRepo := customer.NewRepository(database)
+	iamRepo := iam.NewRepository(database)
 	return &server.Modules{
-		Auth:         auth.NewService(auth.NewRepository(database), custRepo, bus, cfg.JWTSecret),
-		Identity:     identity.NewService(identity.NewRepository(database), bus, uploader),
+		Auth:         auth.NewService(authRepo, custRepo, bus, cfg.JWTSecret),
+		IAM:          iam.NewService(iamRepo),
+		Identity:     identity.NewService(identity.NewRepository(database), authRepo, iamRepo, bus, uploader),
 		Customer:     customer.NewService(custRepo, bus, uploader),
 		Brand:        brand.NewService(brand.NewRepository(database), bus),
 		Product:      product.NewService(product.NewRepository(database), bus),

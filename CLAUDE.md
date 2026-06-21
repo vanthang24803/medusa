@@ -41,3 +41,10 @@ This project is indexed by GitNexus as **medusa** (1941 symbols, 3518 relationsh
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->
+
+## Project Conventions
+
+### HTTP Methods
+- **Only use `GET`, `POST`, `DELETE`** — never `PUT` or `PATCH`.
+- Update endpoints use `POST /{id}/update` pattern (e.g. `POST /brands/{brandId}/update`, `POST /iam/policies/{policyId}/update`).
+- This applies to all handlers and must be reflected in `docs/openapi.yml`.

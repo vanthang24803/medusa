@@ -11,11 +11,12 @@ type Customer struct {
 	Phone       *string    `db:"phone" json:"phone"`
 	CompanyName *string    `db:"company_name" json:"companyName"`
 	AvatarURL   *string    `db:"avatar_url" json:"avatarUrl"`
-	HasAccount  bool       `db:"has_account" json:"hasAccount"`
-	Metadata    []byte     `db:"metadata" json:"-"`
-	CreatedAt   time.Time  `db:"created_at" json:"createdAt"`
-	UpdatedAt   time.Time  `db:"updated_at" json:"updatedAt"`
-	DeletedAt   *time.Time `db:"deleted_at" json:"deletedAt"`
+	HasAccount      bool       `db:"has_account" json:"hasAccount"`
+	Metadata        []byte     `db:"metadata" json:"-"`
+	LastUpdatedBy   *string    `db:"last_updated_by" json:"lastUpdatedBy"`
+	CreatedAt       time.Time  `db:"created_at" json:"createdAt"`
+	UpdatedAt       time.Time  `db:"updated_at" json:"updatedAt"`
+	DeletedAt       *time.Time `db:"deleted_at" json:"deletedAt"`
 }
 
 // CustomerAddress — multiple addresses per customer.

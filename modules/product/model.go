@@ -44,6 +44,7 @@ type Product struct {
 	IsFeatured      bool          `db:"is_featured" json:"isFeatured"`
 	PublishedAt     *time.Time    `db:"published_at" json:"publishedAt"`
 	Metadata        []byte        `db:"metadata" json:"-"`
+	LastUpdatedBy   *string       `db:"last_updated_by" json:"lastUpdatedBy"`
 	CreatedAt       time.Time     `db:"created_at" json:"createdAt"`
 	UpdatedAt       time.Time     `db:"updated_at" json:"updatedAt"`
 	DeletedAt       *time.Time    `db:"deleted_at" json:"deletedAt"`

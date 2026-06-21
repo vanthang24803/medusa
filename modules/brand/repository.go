@@ -19,13 +19,13 @@ func NewRepository(database *db.DB) *Repository {
 }
 
 const brandColumns = `id, name, slug, logo_url, description, is_active, rank,
-	metadata, created_at, updated_at, deleted_at`
+	metadata, last_updated_by, created_at, updated_at, deleted_at`
 
 func (r *Repository) Insert(ctx context.Context, b *Brand) error {
 	query := fmt.Sprintf(`
 		INSERT INTO brand.brand (%s)
 		VALUES (:id, :name, :slug, :logo_url, :description, :is_active, :rank,
-			:metadata, :created_at, :updated_at, :deleted_at)`, brandColumns)
+			:metadata, :last_updated_by, :created_at, :updated_at, :deleted_at)`, brandColumns)
 	_, err := r.db.Writer(ctx).NamedExec(query, b)
 	return err
 }
@@ -80,7 +80,8 @@ func (r *Repository) List(ctx context.Context, q ListQuery) ([]Brand, error) {
 func (r *Repository) Update(ctx context.Context, b *Brand) error {
 	query := `UPDATE brand.brand SET
 		name = :name, slug = :slug, logo_url = :logo_url, description = :description,
-		is_active = :is_active, rank = :rank, metadata = :metadata, updated_at = :updated_at
+		is_active = :is_active, rank = :rank, metadata = :metadata,
+		last_updated_by = :last_updated_by, updated_at = :updated_at
 		WHERE id = :id AND deleted_at IS NULL`
 	_, err := r.db.Writer(ctx).NamedExec(query, b)
 	return err

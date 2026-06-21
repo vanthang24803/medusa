@@ -39,6 +39,8 @@ type APIKey struct {
 	UpdatedAt  time.Time  `db:"updated_at" json:"updatedAt"`
 }
 
+func (k *APIKey) GetID() string { return k.ID }
+
 type AuthToken struct {
 	ID             string     `db:"id" json:"id"`
 	AuthIdentityID string     `db:"auth_identity_id" json:"authIdentityId"`
@@ -86,4 +88,23 @@ type RegisterResponse struct {
 type RefreshResponse struct {
 	Token        string `json:"token"`
 	RefreshToken string `json:"refreshToken"`
+}
+
+type UpdatePasswordReq struct {
+	CurrentPassword string `json:"currentPassword"`
+	NewPassword     string `json:"newPassword"`
+}
+
+type CreateAPIKeyReq struct {
+	Title string     `json:"title"`
+	Type  APIKeyType `json:"type"`
+}
+
+type APIKeyResponse struct {
+	ID        string     `json:"id"`
+	Token     string     `json:"token"` // only returned on creation
+	Type      APIKeyType `json:"type"`
+	Title     string     `json:"title"`
+	CreatedBy *string    `json:"createdBy"`
+	CreatedAt string     `json:"createdAt"`
 }

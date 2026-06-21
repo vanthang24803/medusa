@@ -14,6 +14,7 @@ const maxAvatarSize = 5 << 20 // 5 MB
 
 type Service interface {
 	GetProfile(ctx context.Context, id string) (*Customer, error)
+	UpdateProfile(ctx context.Context, id string, req *UpdateCustomerReq) (*Customer, error)
 	UploadAvatar(ctx context.Context, customerID string, file io.Reader, size int64, contentType string) (*Customer, error)
 }
 
@@ -28,6 +29,13 @@ func NewService(repo *Repository, bus events.EventBus, uploader upload.Uploader)
 }
 
 func (s *service) GetProfile(ctx context.Context, id string) (*Customer, error) {
+	return s.repo.GetByID(ctx, id)
+}
+
+func (s *service) UpdateProfile(ctx context.Context, id string, req *UpdateCustomerReq) (*Customer, error) {
+	if err := s.repo.UpdateProfile(ctx, id, req); err != nil {
+		return nil, fmt.Errorf("update profile: %w", err)
+	}
 	return s.repo.GetByID(ctx, id)
 }
 

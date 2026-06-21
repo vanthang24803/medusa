@@ -152,6 +152,8 @@ func Error(w http.ResponseWriter, r *http.Request, err error) {
 		JSON(w, r, http.StatusBadRequest, errBody("validation_error", err.Error()))
 	case errors.Is(err, types.ErrUnauthorized):
 		JSON(w, r, http.StatusUnauthorized, errBody("unauthorized", err.Error()))
+	case errors.Is(err, types.ErrForbidden):
+		JSON(w, r, http.StatusForbidden, errBody("forbidden", err.Error()))
 	default:
 		JSON(w, r, http.StatusInternalServerError, errBody("internal_error", "internal server error"))
 	}
@@ -171,6 +173,8 @@ func statusForCode(code string) int {
 		return http.StatusBadRequest
 	case "unauthorized":
 		return http.StatusUnauthorized
+	case "forbidden":
+		return http.StatusForbidden
 	default:
 		return http.StatusInternalServerError
 	}

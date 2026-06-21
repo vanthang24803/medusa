@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
@@ -17,6 +18,7 @@ import (
 	"ecommerce/modules/cart"
 	"ecommerce/modules/customer"
 	"ecommerce/modules/fulfillment"
+	"ecommerce/modules/iam"
 	"ecommerce/modules/identity"
 	"ecommerce/modules/inventory"
 	"ecommerce/modules/notification"
@@ -30,6 +32,7 @@ import (
 
 type Modules struct {
 	Auth         auth.Service
+	IAM          iam.Service
 	Identity     identity.Service
 	Customer     customer.Service
 	Brand        brand.Service
@@ -69,21 +72,28 @@ func New(log *zap.Logger, mods *Modules) http.Handler {
 		httpx.JSON(w, r, http.StatusOK, httpx.Response("status", "ok"))
 	})
 
-	r.Handle("/docs/*", http.StripPrefix("/docs/", http.FileServer(http.Dir("docs"))))
+	r.Get("/docs", http.RedirectHandler("/docs/", http.StatusMovedPermanently).ServeHTTP)
+	r.Handle("/docs/*", http.StripPrefix("/docs/", noCacheForSpec(http.FileServer(http.Dir("docs")))))
 
 	r.Route("/api/v1", func(r chi.Router) {
-		routes := map[string]func(chi.Router){
-			"/auth":      handler.NewAuthHandler(mods.Auth).Routes,
-			"/customers": handler.NewCustomerHandler(mods.Customer, mods.Auth).Routes,
-			"/identity":  handler.NewIdentityHandler(mods.Identity, mods.Auth).Routes,
-			"/products":  handler.NewProductHandler(mods.Product).Routes,
-			"/brands":    handler.NewBrandHandler(mods.Brand).Routes,
-		}
-
-		for path, route := range routes {
-			r.Route(path, route)
-		}
+		r.Route("/auth", handler.NewAuthHandler(mods.Auth, log).Routes)
+		r.Route("/customers", handler.NewCustomerHandler(mods.Customer, mods.Auth, log).Routes)
+		r.Route("/identity", handler.NewIdentityHandler(mods.Identity, mods.Auth, mods.IAM).Routes)
+		r.Route("/products", handler.NewProductHandler(mods.Product, mods.Auth, mods.IAM).Routes)
+		r.Route("/brands", handler.NewBrandHandler(mods.Brand, mods.Auth, mods.IAM, log).Routes)
+		r.Route("/iam", handler.NewIAMHandler(mods.IAM, mods.Auth).Routes)
 	})
 
 	return r
+}
+
+// noCacheForSpec disables browser caching for .yml/.yaml files so spec updates
+// are always reflected immediately without a hard refresh.
+func noCacheForSpec(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, ".yml") || strings.HasSuffix(r.URL.Path, ".yaml") {
+			w.Header().Set("Cache-Control", "no-store")
+		}
+		next.ServeHTTP(w, r)
+	})
 }

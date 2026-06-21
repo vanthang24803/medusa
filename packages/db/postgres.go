@@ -190,9 +190,9 @@ func (e *postgresEngine) WithTransaction(ctx context.Context, fn func(ctx contex
 
 // Postgres Schemas
 var postgresSchemas = []string{
-	"auth", "identity", "customer", "product", "pricing",
+	"auth", "iam", "identity", "customer", "product", "pricing",
 	"inventory", "cart", "ordering", "payment", "fulfillment",
-	"promotion", "region", "notification",
+	"promotion", "region", "notification", "brand",
 }
 
 func ensurePostgresSchemas(d *sqlx.DB) error {

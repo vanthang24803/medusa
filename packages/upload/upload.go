@@ -34,14 +34,17 @@ type Config struct {
 	SecretAccessKey string
 	UseSSL          bool
 	PublicURL       string // Public CDN URL (optional)
+	BucketName      string // Default bucket name; overrides the bucketName param in Upload when set
 }
 
 // S3CompatibleUploader implements Uploader interface for all S3-compatible storage.
 type S3CompatibleUploader struct {
 	client    *minio.Client
+	provider  ProviderType
 	endpoint  string
 	useSSL    bool
 	publicURL string
+	bucket    string // default bucket; used when Upload is called with an empty bucketName
 }
 
 // nopUploader is a no-op uploader returned when the configured provider is unavailable.
@@ -105,44 +108,35 @@ func NewUploader(cfg Config) (Uploader, error) {
 
 	return &S3CompatibleUploader{
 		client:    client,
+		provider:  cfg.Provider,
 		endpoint:  cfg.Endpoint,
 		useSSL:    cfg.UseSSL,
 		publicURL: cfg.PublicURL,
+		bucket:    cfg.BucketName,
 	}, nil
 }
 
 // Upload uploads the file and returns the public URL of the file.
+// If the uploader was configured with a BucketName, it takes precedence over the bucketName argument.
 func (u *S3CompatibleUploader) Upload(ctx context.Context, bucketName string, objectName string, reader io.Reader, objectSize int64, contentType string) (string, error) {
-	// Automatically check and create bucket if it doesn't exist
+	if u.bucket != "" {
+		bucketName = u.bucket
+	}
+
+	// Check if bucket exists; if not, attempt to create it (best-effort — providers like R2 require
+	// buckets to be pre-created via their dashboard, so creation errors are non-fatal here).
 	exists, err := u.client.BucketExists(ctx, bucketName)
 	if err != nil {
 		return "", err
 	}
 	if !exists {
-		err = u.client.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{})
-		if err != nil {
-			return "", err
+		if err = u.client.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{}); err == nil {
+			policy := `{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::` + bucketName + `/*"]}]}`
+			_ = u.client.SetBucketPolicy(ctx, bucketName, policy)
 		}
-
-		// Set public policy to allow users to directly access files via URL
-		policy := `{
-			"Version": "2012-10-17",
-			"Statement": [
-				{
-					"Effect": "Allow",
-					"Principal": {"AWS": ["*"]},
-					"Action": ["s3:GetObject"],
-					"Resource": ["arn:aws:s3:::` + bucketName + `/*"]
-				}
-			]
-		}`
-		err = u.client.SetBucketPolicy(ctx, bucketName, policy)
-		if err != nil {
-			return "", err
-		}
+		// If MakeBucket failed the bucket may already exist on the provider side; proceed with upload.
 	}
 
-	// Upload file
 	_, err = u.client.PutObject(ctx, bucketName, objectName, reader, objectSize, minio.PutObjectOptions{
 		ContentType: contentType,
 	})
@@ -150,8 +144,12 @@ func (u *S3CompatibleUploader) Upload(ctx context.Context, bucketName string, ob
 		return "", err
 	}
 
-	// Returns Public URL
 	if u.publicURL != "" {
+		// R2 public bucket URLs are bucket-specific; the bucket name is not part of the object path.
+		// For MinIO/S3, the public URL is a base URL that requires the bucket prefix.
+		if u.provider == ProviderR2 {
+			return u.publicURL + "/" + objectName, nil
+		}
 		return u.publicURL + "/" + bucketName + "/" + objectName, nil
 	}
 
@@ -159,6 +157,5 @@ func (u *S3CompatibleUploader) Upload(ctx context.Context, bucketName string, ob
 	if u.useSSL {
 		scheme = "https"
 	}
-
 	return scheme + "://" + u.endpoint + "/" + bucketName + "/" + objectName, nil
 }

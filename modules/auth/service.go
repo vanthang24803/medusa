@@ -23,6 +23,13 @@ type Service interface {
 	RefreshToken(ctx context.Context, req RefreshReq) (*RefreshResponse, error)
 	Logout(ctx context.Context, authIdentityID string) error
 	ValidateToken(ctx context.Context, tokenStr string) (string, string, error)
+	UpdatePassword(ctx context.Context, authIdentityID, currentPassword, newPassword string) error
+
+	// API key (M2M)
+	CreateAPIKey(ctx context.Context, createdBy string, req CreateAPIKeyReq) (*APIKey, error)
+	ValidateAPIKey(ctx context.Context, token string) (*APIKey, error)
+	RevokeAPIKey(ctx context.Context, id string) error
+	ListAPIKeys(ctx context.Context, createdBy string) ([]APIKey, error)
 }
 
 type service struct {
@@ -138,6 +145,14 @@ func (s *service) Login(ctx context.Context, req LoginReq) (*AuthResponse, error
 		return nil, types.NewValidation("invalid email or password")
 	}
 
+	active, err := s.repo.IsAdminActive(ctx, provider.AuthIdentityID)
+	if err != nil {
+		return nil, fmt.Errorf("check admin status: %w", err)
+	}
+	if !active {
+		return nil, types.NewValidation("account has been deactivated")
+	}
+
 	identity, err := s.repo.GetAuthIdentityByID(ctx, provider.AuthIdentityID)
 	if err != nil {
 		return nil, err
@@ -232,6 +247,80 @@ func (s *service) ValidateToken(ctx context.Context, tokenStr string) (string, s
 	}
 
 	return claims.Subject, claims.CustomerID, nil
+}
+
+func (s *service) UpdatePassword(ctx context.Context, authIdentityID, currentPassword, newPassword string) error {
+	if currentPassword == "" || newPassword == "" {
+		return types.NewValidation("current password and new password are required")
+	}
+	if len(newPassword) < 6 {
+		return types.NewValidation("new password must be at least 6 characters")
+	}
+
+	provider, err := s.repo.GetProviderByAuthIdentityID(ctx, authIdentityID)
+	if err != nil {
+		return err
+	}
+
+	var meta struct {
+		Password string `json:"password"`
+	}
+	_ = json.Unmarshal(provider.ProviderMetadata, &meta)
+
+	if err := bcrypt.CompareHashAndPassword([]byte(meta.Password), []byte(currentPassword)); err != nil {
+		return types.NewValidation("current password is incorrect")
+	}
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("hash password: %w", err)
+	}
+
+	newMeta, _ := json.Marshal(map[string]string{"password": string(hashed)})
+	return s.repo.UpdateProviderMetadata(ctx, provider.ID, newMeta)
+}
+
+func (s *service) CreateAPIKey(ctx context.Context, createdBy string, req CreateAPIKeyReq) (*APIKey, error) {
+	if req.Title == "" {
+		return nil, types.NewValidation("title is required")
+	}
+	keyType := req.Type
+	if keyType == "" {
+		keyType = APIKeyTypeSecret
+	}
+	now := time.Now().UTC()
+	token := types.GenerateID("sk")
+	k := &APIKey{
+		ID:        types.GenerateID("apk"),
+		Token:     token,
+		Type:      keyType,
+		Title:     req.Title,
+		CreatedBy: &createdBy,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	if err := s.repo.InsertAPIKey(ctx, k); err != nil {
+		return nil, fmt.Errorf("insert api key: %w", err)
+	}
+	return k, nil
+}
+
+func (s *service) ValidateAPIKey(ctx context.Context, token string) (*APIKey, error) {
+	k, err := s.repo.GetAPIKeyByToken(ctx, token)
+	if err != nil {
+		return nil, types.NewValidation("invalid api key")
+	}
+	// Update last_used_at in the background (best-effort)
+	_ = s.repo.TouchAPIKeyLastUsed(ctx, k.ID)
+	return k, nil
+}
+
+func (s *service) RevokeAPIKey(ctx context.Context, id string) error {
+	return s.repo.RevokeAPIKey(ctx, id)
+}
+
+func (s *service) ListAPIKeys(ctx context.Context, createdBy string) ([]APIKey, error) {
+	return s.repo.ListAPIKeysByCreator(ctx, createdBy)
 }
 
 func (s *service) generateAccessToken(authID, customerID string) (string, error) {

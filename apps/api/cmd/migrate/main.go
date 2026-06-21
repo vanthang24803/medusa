@@ -49,7 +49,7 @@ func main() {
 }
 
 var schemas = []string{
-	"auth", "identity", "customer", "product", "pricing",
+	"auth", "iam", "identity", "customer", "product", "pricing",
 	"inventory", "cart", "ordering", "payment", "fulfillment",
 	"promotion", "region", "notification", "brand",
 }
