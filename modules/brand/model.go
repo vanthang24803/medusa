@@ -11,10 +11,11 @@ type Brand struct {
 	Description *string    `db:"description" json:"description"`
 	IsActive    bool       `db:"is_active" json:"isActive"`
 	Rank        int        `db:"rank" json:"rank"`
-	Metadata    []byte     `db:"metadata" json:"-"`
-	CreatedAt   time.Time  `db:"created_at" json:"createdAt"`
-	UpdatedAt   time.Time  `db:"updated_at" json:"updatedAt"`
-	DeletedAt   *time.Time `db:"deleted_at" json:"deletedAt"`
+	Metadata        []byte     `db:"metadata" json:"-"`
+	LastUpdatedBy   *string    `db:"last_updated_by" json:"lastUpdatedBy"`
+	CreatedAt       time.Time  `db:"created_at" json:"createdAt"`
+	UpdatedAt       time.Time  `db:"updated_at" json:"updatedAt"`
+	DeletedAt       *time.Time `db:"deleted_at" json:"deletedAt"`
 }
 
 type ListQuery struct {

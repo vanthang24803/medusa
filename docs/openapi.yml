@@ -159,12 +159,913 @@ paths:
                   lastName: Doe
                   phone: null
                   companyName: null
+                  avatarUrl: null
                   hasAccount: true
                   createdAt: "2026-06-15T07:43:58Z"
                   updatedAt: "2026-06-15T07:43:58Z"
                   deletedAt: null
         "401":
           $ref: "#/components/responses/UnauthorizedError"
+
+  /customers/me/update:
+    post:
+      tags: [Customer]
+      summary: Update customer profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCustomerReq"
+            example:
+              firstName: John
+              lastName: Doe
+              phone: "+84901234567"
+      responses:
+        "200":
+          description: Updated customer profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer:
+                    $ref: "#/components/schemas/Customer"
+              example:
+                customer:
+                  id: cus_019eca3c-...
+                  email: john@example.com
+                  firstName: John
+                  lastName: Doe
+                  phone: "+84901234567"
+                  companyName: null
+                  avatarUrl: null
+                  hasAccount: true
+                  createdAt: "2026-06-15T07:43:58Z"
+                  updatedAt: "2026-06-21T06:40:14Z"
+                  deletedAt: null
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /customers/me/password:
+    post:
+      tags: [Customer]
+      summary: Update customer password
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword:
+                  type: string
+                  example: oldPass123
+                newPassword:
+                  type: string
+                  minLength: 6
+                  example: newPass456
+      responses:
+        "200":
+          description: Password updated
+          content:
+            application/json:
+              example:
+                message: password updated successfully
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /customers/me/avatar:
+    post:
+      tags: [Customer]
+      summary: Upload customer avatar
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [avatar]
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+                  description: Image file (JPEG, PNG, WebP, GIF — max 5 MB)
+      responses:
+        "200":
+          description: Avatar uploaded; returns updated customer profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer:
+                    $ref: "#/components/schemas/Customer"
+              example:
+                customer:
+                  id: cus_019eca3c-...
+                  email: john@example.com
+                  firstName: John
+                  lastName: Doe
+                  avatarUrl: "http://localhost:9000/avatars/customers/cus_019eca3c-.../avatar.jpg?v=1750000000"
+                  hasAccount: true
+                  createdAt: "2026-06-15T07:43:58Z"
+                  updatedAt: "2026-06-15T07:43:59Z"
+                  deletedAt: null
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /identity/admin:
+    get:
+      tags: [Identity]
+      summary: List all admin accounts
+      description: Returns all admin users (all statuses). Requires `user:Manage` permission.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of admin users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+              example:
+                users:
+                  - id: auth_019eca3c-...
+                    email: admin@example.com
+                    firstName: Admin
+                    lastName: User
+                    avatarUrl: null
+                    createdAt: "2026-06-15T07:43:58Z"
+                    updatedAt: "2026-06-15T07:43:58Z"
+                    deletedAt: null
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+    post:
+      tags: [Identity]
+      summary: Create an admin account
+      description: >
+        Creates a new admin user with email/password credentials in one step.
+        Requires `identity:Manage` permission (super_admin only).
+        The new admin can log in immediately via `POST /auth/login`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAdminReq"
+            example:
+              email: newadmin@example.com
+              password: securePass123
+              firstName: Nguyen
+              lastName: Van A
+              roleId: role_system_super_admin
+      responses:
+        "201":
+          description: Admin account created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/User"
+              example:
+                user:
+                  id: auth_019eca3c-...
+                  email: newadmin@example.com
+                  firstName: Nguyen
+                  lastName: Van A
+                  avatarUrl: null
+                  createdAt: "2026-06-21T07:00:00Z"
+                  updatedAt: "2026-06-21T07:00:00Z"
+                  deletedAt: null
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+
+  /identity/admin/{userId}:
+    delete:
+      tags: [Identity]
+      summary: Close an admin account
+      description: >
+        Sets the admin account status to `closed` and invalidates all active sessions.
+        The account and credentials are preserved. Requires `identity:Manage` permission (super_admin only).
+        Cannot close your own account.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Auth identity ID of the admin to close
+          example: auth_019eca3c-...
+      responses:
+        "200":
+          description: Admin account closed
+          content:
+            application/json:
+              example:
+                message: admin account closed
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /identity/admin/{userId}/ban:
+    post:
+      tags: [Identity]
+      summary: Ban a user
+      description: >
+        Sets the user account status to `ban` and invalidates all active sessions.
+        Requires `user:Manage` permission. Cannot ban your own account or a closed account.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the user to ban
+          example: auth_019eca3c-...
+      responses:
+        "200":
+          description: User banned
+          content:
+            application/json:
+              example:
+                message: user banned
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /identity/admin/{userId}/unban:
+    post:
+      tags: [Identity]
+      summary: Unban a user
+      description: >
+        Restores a banned user account to `active` status.
+        Requires `user:Manage` permission.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the banned user to unban
+          example: auth_019eca3c-...
+      responses:
+        "200":
+          description: User unbanned
+          content:
+            application/json:
+              example:
+                message: user unbanned
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /identity/me:
+    get:
+      tags: [Identity]
+      summary: Get authenticated admin user profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Admin user profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/User"
+              example:
+                user:
+                  id: usr_019eca3c-...
+                  email: admin@example.com
+                  firstName: Admin
+                  lastName: User
+                  avatarUrl: null
+                  createdAt: "2026-06-15T07:43:58Z"
+                  updatedAt: "2026-06-15T07:43:58Z"
+                  deletedAt: null
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /identity/me/update:
+    post:
+      tags: [Identity]
+      summary: Update admin user profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserReq"
+            example:
+              firstName: Admin
+              lastName: Smith
+      responses:
+        "200":
+          description: Updated admin user profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/User"
+              example:
+                user:
+                  id: usr_019eca3c-...
+                  email: admin@example.com
+                  firstName: Admin
+                  lastName: Smith
+                  avatarUrl: null
+                  createdAt: "2026-06-15T07:43:58Z"
+                  updatedAt: "2026-06-21T06:40:14Z"
+                  deletedAt: null
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /identity/me/avatar:
+    post:
+      tags: [Identity]
+      summary: Upload admin user avatar
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [avatar]
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+                  description: Image file (JPEG, PNG, WebP, GIF — max 5 MB)
+      responses:
+        "200":
+          description: Avatar uploaded; returns updated user profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/User"
+              example:
+                user:
+                  id: usr_019eca3c-...
+                  email: admin@example.com
+                  firstName: Admin
+                  lastName: User
+                  avatarUrl: "http://localhost:9000/avatars/identity/usr_019eca3c-.../avatar.jpg?v=1750000000"
+                  createdAt: "2026-06-15T07:43:58Z"
+                  updatedAt: "2026-06-15T07:43:59Z"
+                  deletedAt: null
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  # ── IAM: Roles ────────────────────────────────────────────────────────────────
+
+  /iam/roles:
+    get:
+      tags: [IAM]
+      summary: List all roles
+      description: Requires `iam:Manage` permission.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of roles
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roles:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Role"
+              example:
+                roles:
+                  - id: role_01abc...
+                    name: Admin
+                    description: Full access
+                    isSystem: true
+                    createdAt: "2026-06-15T07:43:58Z"
+                    updatedAt: "2026-06-15T07:43:58Z"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+    post:
+      tags: [IAM]
+      summary: Create a role
+      description: Requires `iam:Manage` permission.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoleReq"
+            example:
+              name: Editor
+              description: Can manage products and inventory
+      responses:
+        "201":
+          description: Role created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  role:
+                    $ref: "#/components/schemas/Role"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+
+  /iam/roles/{roleId}:
+    delete:
+      tags: [IAM]
+      summary: Delete a role
+      description: Requires `iam:Manage` permission. System roles cannot be deleted.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/roleId"
+      responses:
+        "200":
+          description: Role deleted
+          content:
+            application/json:
+              example:
+                message: role deleted
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /iam/roles/{roleId}/policies/{policyId}:
+    post:
+      tags: [IAM]
+      summary: Attach a policy to a role
+      description: Requires `iam:Manage` permission.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/roleId"
+        - $ref: "#/components/parameters/policyId"
+      responses:
+        "200":
+          description: Policy attached
+          content:
+            application/json:
+              example:
+                message: policy attached
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+    delete:
+      tags: [IAM]
+      summary: Detach a policy from a role
+      description: Requires `iam:Manage` permission.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/roleId"
+        - $ref: "#/components/parameters/policyId"
+      responses:
+        "200":
+          description: Policy detached
+          content:
+            application/json:
+              example:
+                message: policy detached
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+
+  # ── IAM: Policies ─────────────────────────────────────────────────────────────
+
+  /iam/policies:
+    get:
+      tags: [IAM]
+      summary: List all policies
+      description: Requires `iam:Manage` permission.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of policies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  policies:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Policy"
+              example:
+                policies:
+                  - id: pol_01abc...
+                    name: ProductFullAccess
+                    description: Grants full access to products
+                    isSystem: false
+                    document:
+                      version: "2024-01-01"
+                      statements:
+                        - sid: AllowProducts
+                          effect: Allow
+                          actions: ["product:*"]
+                          resources: ["product/*"]
+                    createdAt: "2026-06-15T07:43:58Z"
+                    updatedAt: "2026-06-15T07:43:58Z"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+    post:
+      tags: [IAM]
+      summary: Create a policy
+      description: Requires `iam:Manage` permission.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePolicyReq"
+            example:
+              name: ProductReadOnly
+              description: Read-only access to products
+              document:
+                version: "2024-01-01"
+                statements:
+                  - sid: AllowRead
+                    effect: Allow
+                    actions: ["product:Read"]
+                    resources: ["product/*"]
+      responses:
+        "201":
+          description: Policy created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  policy:
+                    $ref: "#/components/schemas/Policy"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+
+  /iam/policies/{policyId}/update:
+    post:
+      tags: [IAM]
+      summary: Update a policy
+      description: Requires `iam:Manage` permission.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/policyId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePolicyReq"
+            example:
+              description: Updated description
+              document:
+                version: "2024-01-01"
+                statements:
+                  - effect: Allow
+                    actions: ["product:Read", "product:Update"]
+                    resources: ["product/*"]
+      responses:
+        "200":
+          description: Policy updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  policy:
+                    $ref: "#/components/schemas/Policy"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /iam/policies/{policyId}:
+    delete:
+      tags: [IAM]
+      summary: Delete a policy
+      description: Requires `iam:Manage` permission.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/policyId"
+      responses:
+        "200":
+          description: Policy deleted
+          content:
+            application/json:
+              example:
+                message: policy deleted
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  # ── IAM: Principal role assignment ────────────────────────────────────────────
+
+  /iam/principals/{authId}/roles:
+    get:
+      tags: [IAM]
+      summary: Get roles assigned to a principal
+      description: Requires `iam:Manage` permission.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/authId"
+      responses:
+        "200":
+          description: List of roles assigned to the principal
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roles:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Role"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+
+  /iam/principals/{authId}/roles/{roleId}:
+    post:
+      tags: [IAM]
+      summary: Assign a role to a principal
+      description: Requires `iam:Manage` permission.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/authId"
+        - $ref: "#/components/parameters/roleId"
+      responses:
+        "200":
+          description: Role assigned
+          content:
+            application/json:
+              example:
+                message: role assigned
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+    delete:
+      tags: [IAM]
+      summary: Unassign a role from a principal
+      description: Requires `iam:Manage` permission.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/authId"
+        - $ref: "#/components/parameters/roleId"
+      responses:
+        "200":
+          description: Role unassigned
+          content:
+            application/json:
+              example:
+                message: role unassigned
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+
+  # ── IAM: API Keys ─────────────────────────────────────────────────────────────
+
+  /iam/api-keys:
+    get:
+      tags: [IAM]
+      summary: List API keys for the authenticated admin
+      description: Requires `iam:Manage` permission.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of API keys
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  apiKeys:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/APIKey"
+              example:
+                apiKeys:
+                  - id: key_01abc...
+                    token: sk_live_...
+                    type: secret
+                    title: My API Key
+                    lastUsedAt: null
+                    revokedAt: null
+                    createdBy: auth_01abc...
+                    createdAt: "2026-06-15T07:43:58Z"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+    post:
+      tags: [IAM]
+      summary: Create an API key
+      description: Requires `iam:Manage` permission. Token is only returned once at creation.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAPIKeyReq"
+            example:
+              title: Storefront Key
+              type: publishable
+      responses:
+        "201":
+          description: API key created — token only visible here
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  apiKey:
+                    $ref: "#/components/schemas/APIKey"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+
+  /iam/api-keys/{keyId}:
+    delete:
+      tags: [IAM]
+      summary: Revoke an API key
+      description: Requires `iam:Manage` permission.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/keyId"
+      responses:
+        "200":
+          description: API key revoked
+          content:
+            application/json:
+              example:
+                message: api key revoked
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /iam/api-keys/{keyId}/policies/{policyId}:
+    post:
+      tags: [IAM]
+      summary: Attach a policy to an API key
+      description: Requires `iam:Manage` permission.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/keyId"
+        - $ref: "#/components/parameters/policyId"
+      responses:
+        "200":
+          description: Policy attached to API key
+          content:
+            application/json:
+              example:
+                message: policy attached to api key
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+    delete:
+      tags: [IAM]
+      summary: Detach a policy from an API key
+      description: Requires `iam:Manage` permission.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/keyId"
+        - $ref: "#/components/parameters/policyId"
+      responses:
+        "200":
+          description: Policy detached from API key
+          content:
+            application/json:
+              example:
+                message: policy detached from api key
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
 
 components:
   securitySchemes:
@@ -192,6 +1093,58 @@ components:
         refreshToken:
           type: string
 
+    CreateAdminReq:
+      type: object
+      required: [email, password, firstName, lastName]
+      properties:
+        email:
+          type: string
+          format: email
+          example: newadmin@example.com
+        password:
+          type: string
+          minLength: 6
+          example: securePass123
+        firstName:
+          type: string
+          example: Nguyen
+        lastName:
+          type: string
+          example: Van A
+        roleId:
+          type: string
+          nullable: true
+          description: ID of an existing role to assign immediately (optional)
+          example: role_system_super_admin
+
+    UpdateCustomerReq:
+      type: object
+      properties:
+        firstName:
+          type: string
+          nullable: true
+          example: John
+        lastName:
+          type: string
+          nullable: true
+          example: Doe
+        phone:
+          type: string
+          nullable: true
+          example: "+84901234567"
+
+    UpdateUserReq:
+      type: object
+      properties:
+        firstName:
+          type: string
+          nullable: true
+          example: Admin
+        lastName:
+          type: string
+          nullable: true
+          example: Smith
+
     Customer:
       type: object
       properties:
@@ -211,6 +1164,10 @@ components:
         companyName:
           type: string
           nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+          description: Public URL of the customer's avatar image
         hasAccount:
           type: boolean
         createdAt:
@@ -224,6 +1181,193 @@ components:
           format: date-time
           nullable: true
 
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+          description: Public URL of the admin user's avatar image
+        status:
+          type: string
+          enum: [init, active, ban, closed]
+          description: "Account status — only `active` can log in; `init` = awaiting activation, `ban` = banned, `closed` = closed by super_admin"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    Role:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        isSystem:
+          type: boolean
+          description: System roles cannot be deleted
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Statement:
+      type: object
+      required: [effect, actions, resources]
+      properties:
+        sid:
+          type: string
+          description: Optional statement ID
+        effect:
+          type: string
+          enum: [Allow, Deny]
+        actions:
+          type: array
+          items:
+            type: string
+          description: >
+            Supported actions: `*`, `product:Read`, `product:Create`, `product:Update`,
+            `product:Delete`, `product:*`, `brand:*`, `order:*`, `customer:*`,
+            `inventory:*`, `pricing:*`, `cart:*`, `fulfillment:*`, `promotion:*`,
+            `region:*`, `notification:*`, `iam:Manage`
+          example: ["product:Read", "product:Update"]
+        resources:
+          type: array
+          items:
+            type: string
+          description: Resource patterns (`*`, `product/*`, etc.)
+          example: ["product/*"]
+
+    PolicyDocument:
+      type: object
+      required: [version, statements]
+      properties:
+        version:
+          type: string
+          example: "2024-01-01"
+        statements:
+          type: array
+          items:
+            $ref: "#/components/schemas/Statement"
+
+    Policy:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        document:
+          $ref: "#/components/schemas/PolicyDocument"
+        isSystem:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateRoleReq:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          example: Editor
+        description:
+          type: string
+          example: Can manage products and inventory
+
+    CreatePolicyReq:
+      type: object
+      required: [name, document]
+      properties:
+        name:
+          type: string
+          example: ProductReadOnly
+        description:
+          type: string
+          example: Read-only access to products
+        document:
+          $ref: "#/components/schemas/PolicyDocument"
+
+    UpdatePolicyReq:
+      type: object
+      properties:
+        description:
+          type: string
+          nullable: true
+        document:
+          $ref: "#/components/schemas/PolicyDocument"
+          nullable: true
+
+    APIKey:
+      type: object
+      properties:
+        id:
+          type: string
+        token:
+          type: string
+          description: Only present on creation response
+        type:
+          type: string
+          enum: [publishable, secret]
+        title:
+          type: string
+        lastUsedAt:
+          type: string
+          format: date-time
+          nullable: true
+        revokedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdBy:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateAPIKeyReq:
+      type: object
+      required: [title, type]
+      properties:
+        title:
+          type: string
+          example: Storefront Key
+        type:
+          type: string
+          enum: [publishable, secret]
+          example: publishable
+
     ErrorResponse:
       type: object
       properties:
@@ -234,6 +1378,37 @@ components:
               type: string
             message:
               type: string
+
+  parameters:
+    roleId:
+      name: roleId
+      in: path
+      required: true
+      schema:
+        type: string
+      example: role_01abc...
+    policyId:
+      name: policyId
+      in: path
+      required: true
+      schema:
+        type: string
+      example: pol_01abc...
+    authId:
+      name: authId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Auth identity ID of the principal
+      example: auth_01abc...
+    keyId:
+      name: keyId
+      in: path
+      required: true
+      schema:
+        type: string
+      example: key_01abc...
 
   responses:
     ValidationError:
@@ -250,6 +1425,18 @@ components:
             $ref: "#/components/schemas/ErrorResponse"
     ConflictError:
       description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ForbiddenError:
+      description: Forbidden — insufficient permissions
       content:
         application/json:
           schema:

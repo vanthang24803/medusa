@@ -10,6 +10,7 @@ var (
 	ErrNotFound     = errors.New("resource not found")
 	ErrConflict     = errors.New("resource conflict")
 	ErrUnauthorized = errors.New("unauthorized")
+	ErrForbidden    = errors.New("forbidden")
 	ErrValidation   = errors.New("validation failed")
 )
 
@@ -43,4 +44,8 @@ func NewConflict(message string) *AppError {
 
 func NewValidation(message string) *AppError {
 	return &AppError{Code: "validation_error", Message: message, Err: ErrValidation}
+}
+
+func NewForbidden(message string) *AppError {
+	return &AppError{Code: "forbidden", Message: message, Err: ErrForbidden}
 }

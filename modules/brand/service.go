@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"ecommerce/packages/actor"
 	"ecommerce/packages/events"
 	"ecommerce/packages/types"
 )
@@ -87,6 +88,7 @@ func (s *service) Update(ctx context.Context, id string, in UpdateInput) (*Brand
 		b.Rank = *in.Rank
 	}
 	b.UpdatedAt = time.Now().UTC()
+	b.LastUpdatedBy = actor.Get(ctx)
 	if err := s.repo.Update(ctx, b); err != nil {
 		return nil, err
 	}

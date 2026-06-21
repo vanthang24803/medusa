@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 // Config contains database connection configuration parameters.
@@ -112,7 +112,7 @@ type postgresEngine struct {
 
 func newPostgresEngine(cfg Config) (*postgresEngine, error) {
 	openDB := func(dsn string) (*sqlx.DB, error) {
-		d, err := sqlx.Connect("postgres", dsn)
+		d, err := sqlx.Connect("pgx", dsn)
 		if err != nil {
 			return nil, err
 		}
@@ -190,9 +190,9 @@ func (e *postgresEngine) WithTransaction(ctx context.Context, fn func(ctx contex
 
 // Postgres Schemas
 var postgresSchemas = []string{
-	"auth", "identity", "customer", "product", "pricing",
+	"auth", "iam", "identity", "customer", "product", "pricing",
 	"inventory", "cart", "ordering", "payment", "fulfillment",
-	"promotion", "region", "notification",
+	"promotion", "region", "notification", "brand",
 }
 
 func ensurePostgresSchemas(d *sqlx.DB) error {

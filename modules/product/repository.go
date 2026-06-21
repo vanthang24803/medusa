@@ -23,7 +23,7 @@ const productColumns = `id, title, subtitle, description, handle, is_giftcard, s
 	thumbnail, weight, length, height, width, origin_country, hs_code, mid_code,
 	material, discountable, external_id, collection_id, type_id, brand_id,
 	author, isbn, page_count, compare_at_price, quantity, rating, review_count,
-	is_featured, published_at, metadata, created_at, updated_at, deleted_at`
+	is_featured, published_at, metadata, last_updated_by, created_at, updated_at, deleted_at`
 
 // Insert creates a new product.
 func (r *Repository) Insert(ctx context.Context, p *Product) error {
@@ -34,7 +34,7 @@ func (r *Repository) Insert(ctx context.Context, p *Product) error {
 			:mid_code, :material, :discountable, :external_id, :collection_id, :type_id,
 			:brand_id, :author, :isbn, :page_count, :compare_at_price, :quantity,
 			:rating, :review_count, :is_featured, :published_at,
-			:metadata, :created_at, :updated_at, :deleted_at)`, productColumns)
+			:metadata, :last_updated_by, :created_at, :updated_at, :deleted_at)`, productColumns)
 	_, err := r.db.Writer(ctx).NamedExec(query, p)
 	return err
 }

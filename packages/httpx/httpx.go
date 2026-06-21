@@ -152,6 +152,8 @@ func Error(w http.ResponseWriter, r *http.Request, err error) {
 		JSON(w, r, http.StatusBadRequest, errBody("validation_error", err.Error()))
 	case errors.Is(err, types.ErrUnauthorized):
 		JSON(w, r, http.StatusUnauthorized, errBody("unauthorized", err.Error()))
+	case errors.Is(err, types.ErrForbidden):
+		JSON(w, r, http.StatusForbidden, errBody("forbidden", err.Error()))
 	default:
 		JSON(w, r, http.StatusInternalServerError, errBody("internal_error", "internal server error"))
 	}
@@ -171,6 +173,8 @@ func statusForCode(code string) int {
 		return http.StatusBadRequest
 	case "unauthorized":
 		return http.StatusUnauthorized
+	case "forbidden":
+		return http.StatusForbidden
 	default:
 		return http.StatusInternalServerError
 	}
@@ -189,6 +193,10 @@ func DecodeJSON(r *http.Request, dst any) error {
 func DecodeQuery(r *http.Request, dst any) error {
 	values := r.URL.Query()
 	return decodeValues(values, dst)
+}
+
+func Response(name string, data any) map[string]any {
+	return map[string]any{name: data}
 }
 
 func decodeValues(values url.Values, dst any) error {
@@ -229,7 +237,7 @@ func decodeValues(values url.Values, dst any) error {
 			if b, err := strconv.ParseBool(val); err == nil {
 				fieldVal.SetBool(b)
 			}
-		case reflect.Ptr:
+		case reflect.Pointer:
 			switch fieldVal.Type().Elem().Kind() {
 			case reflect.String:
 				fieldVal.Set(reflect.ValueOf(&val))

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"ecommerce/packages/actor"
 	"ecommerce/packages/httpx"
 	"ecommerce/packages/types"
 )
@@ -14,6 +15,7 @@ type contextKey string
 const (
 	CtxAuthIdentityID contextKey = "auth_identity_id"
 	CtxCustomerID     contextKey = "customer_id"
+	CtxAPIKeyID       contextKey = "api_key_id"
 )
 
 func GetAuthIdentityID(ctx context.Context) string {
@@ -23,6 +25,11 @@ func GetAuthIdentityID(ctx context.Context) string {
 
 func GetCustomerID(ctx context.Context) string {
 	v, _ := ctx.Value(CtxCustomerID).(string)
+	return v
+}
+
+func GetAPIKeyID(ctx context.Context) string {
+	v, _ := ctx.Value(CtxAPIKeyID).(string)
 	return v
 }
 
@@ -53,6 +60,7 @@ func RequireAuth(v tokenValidator) func(http.Handler) http.Handler {
 
 			ctx := context.WithValue(r.Context(), CtxAuthIdentityID, authID)
 			ctx = context.WithValue(ctx, CtxCustomerID, customerID)
+			ctx = actor.Set(ctx, authID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

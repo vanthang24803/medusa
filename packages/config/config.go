@@ -20,6 +20,7 @@ type Config struct {
 	UploadRegion       string
 	UploadSSL          bool
 	UploadPublicURL    string
+	UploadBucket       string
 	JWTSecret          string
 	ModulesDir         string
 
@@ -72,6 +73,7 @@ func Load() *Config {
 		UploadRegion:       getEnv("UPLOAD_REGION", ""),
 		UploadSSL:          getEnv("UPLOAD_SSL", "false") == "true",
 		UploadPublicURL:    getEnv("UPLOAD_PUBLIC_URL", ""),
+		UploadBucket:       getEnv("UPLOAD_BUCKET", "uploads"),
 		JWTSecret:          getEnv("JWT_SECRET", "change-me-in-production"),
 		ModulesDir:         getEnv("MODULES_DIR", "modules"),
 

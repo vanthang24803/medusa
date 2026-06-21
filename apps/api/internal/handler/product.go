@@ -3,6 +3,9 @@ package handler
 import (
 	"net/http"
 
+	"ecommerce/apps/api/internal/middleware"
+	"ecommerce/modules/auth"
+	"ecommerce/modules/iam"
 	"ecommerce/modules/product"
 	"ecommerce/packages/httpx"
 
@@ -10,20 +13,37 @@ import (
 )
 
 type ProductHandler struct {
-	svc product.Service
+	svc     product.Service
+	authSvc auth.Service
+	iamSvc  iam.Service
 }
 
-func NewProductHandler(svc product.Service) *ProductHandler {
-	return &ProductHandler{svc: svc}
+func NewProductHandler(svc product.Service, authSvc auth.Service, iamSvc iam.Service) *ProductHandler {
+	return &ProductHandler{svc: svc, authSvc: authSvc, iamSvc: iamSvc}
 }
 
 func (h *ProductHandler) Routes(r chi.Router) {
+	// Public read endpoints
 	r.Get("/", h.List)
 	r.Get("/{productId}", h.GetByID)
 	r.Get("/handle/{handle}", h.GetByHandle)
-	r.Post("/", h.Create)
-	r.Delete("/{productId}", h.Delete)
-	r.Post("/{productId}/variants", h.CreateVariant)
+
+	// Admin-only write endpoints
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RequireAnyAuth(h.authSvc, h.authSvc))
+		r.Use(middleware.RequireAnyPermission(h.iamSvc, iam.ActionProductCreate, iam.ActionProductManage))
+		r.Post("/", h.Create)
+	})
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RequireAnyAuth(h.authSvc, h.authSvc))
+		r.Use(middleware.RequireAnyPermission(h.iamSvc, iam.ActionProductDelete, iam.ActionProductManage))
+		r.Delete("/{productId}", h.Delete)
+	})
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RequireAnyAuth(h.authSvc, h.authSvc))
+		r.Use(middleware.RequireAnyPermission(h.iamSvc, iam.ActionProductCreate, iam.ActionProductManage))
+		r.Post("/{productId}/variants", h.CreateVariant)
+	})
 }
 
 func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {

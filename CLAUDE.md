@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **medusa** (1591 symbols, 2424 relationships, 77 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **medusa** (1941 symbols, 3518 relationships, 148 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > Index stale? Run `node .gitnexus/run.cjs analyze` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash → `npm i -g gitnexus`; #1939).
 
@@ -41,3 +41,10 @@ This project is indexed by GitNexus as **medusa** (1591 symbols, 2424 relationsh
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->
+
+## Project Conventions
+
+### HTTP Methods
+- **Only use `GET`, `POST`, `DELETE`** — never `PUT` or `PATCH`.
+- Update endpoints use `POST /{id}/update` pattern (e.g. `POST /brands/{brandId}/update`, `POST /iam/policies/{policyId}/update`).
+- This applies to all handlers and must be reflected in `docs/openapi.yml`.
