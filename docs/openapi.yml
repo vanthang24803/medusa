@@ -159,10 +159,129 @@ paths:
                   lastName: Doe
                   phone: null
                   companyName: null
+                  avatarUrl: null
                   hasAccount: true
                   createdAt: "2026-06-15T07:43:58Z"
                   updatedAt: "2026-06-15T07:43:58Z"
                   deletedAt: null
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /customers/me/avatar:
+    post:
+      tags: [Customer]
+      summary: Upload customer avatar
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [avatar]
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+                  description: Image file (JPEG, PNG, WebP, GIF — max 5 MB)
+      responses:
+        "200":
+          description: Avatar uploaded; returns updated customer profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer:
+                    $ref: "#/components/schemas/Customer"
+              example:
+                customer:
+                  id: cus_019eca3c-...
+                  email: john@example.com
+                  firstName: John
+                  lastName: Doe
+                  avatarUrl: "http://localhost:9000/avatars/customers/cus_019eca3c-.../avatar.jpg?v=1750000000"
+                  hasAccount: true
+                  createdAt: "2026-06-15T07:43:58Z"
+                  updatedAt: "2026-06-15T07:43:59Z"
+                  deletedAt: null
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /identity/me:
+    get:
+      tags: [Identity]
+      summary: Get authenticated admin user profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Admin user profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/User"
+              example:
+                user:
+                  id: usr_019eca3c-...
+                  email: admin@example.com
+                  firstName: Admin
+                  lastName: User
+                  avatarUrl: null
+                  createdAt: "2026-06-15T07:43:58Z"
+                  updatedAt: "2026-06-15T07:43:58Z"
+                  deletedAt: null
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /identity/me/avatar:
+    post:
+      tags: [Identity]
+      summary: Upload admin user avatar
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [avatar]
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+                  description: Image file (JPEG, PNG, WebP, GIF — max 5 MB)
+      responses:
+        "200":
+          description: Avatar uploaded; returns updated user profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/User"
+              example:
+                user:
+                  id: usr_019eca3c-...
+                  email: admin@example.com
+                  firstName: Admin
+                  lastName: User
+                  avatarUrl: "http://localhost:9000/avatars/identity/usr_019eca3c-.../avatar.jpg?v=1750000000"
+                  createdAt: "2026-06-15T07:43:58Z"
+                  updatedAt: "2026-06-15T07:43:59Z"
+                  deletedAt: null
+        "400":
+          $ref: "#/components/responses/ValidationError"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
 
@@ -211,8 +330,40 @@ components:
         companyName:
           type: string
           nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+          description: Public URL of the customer's avatar image
         hasAccount:
           type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+          description: Public URL of the admin user's avatar image
         createdAt:
           type: string
           format: date-time
@@ -250,6 +401,12 @@ components:
             $ref: "#/components/schemas/ErrorResponse"
     ConflictError:
       description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFoundError:
+      description: Resource not found
       content:
         application/json:
           schema:

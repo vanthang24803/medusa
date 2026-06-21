@@ -191,6 +191,10 @@ func DecodeQuery(r *http.Request, dst any) error {
 	return decodeValues(values, dst)
 }
 
+func Response(name string, data any) map[string]any {
+	return map[string]any{name: data}
+}
+
 func decodeValues(values url.Values, dst any) error {
 	rv := reflect.ValueOf(dst)
 	if rv.Kind() != reflect.Ptr || rv.Elem().Kind() != reflect.Struct {
@@ -229,7 +233,7 @@ func decodeValues(values url.Values, dst any) error {
 			if b, err := strconv.ParseBool(val); err == nil {
 				fieldVal.SetBool(b)
 			}
-		case reflect.Ptr:
+		case reflect.Pointer:
 			switch fieldVal.Type().Elem().Kind() {
 			case reflect.String:
 				fieldVal.Set(reflect.ValueOf(&val))

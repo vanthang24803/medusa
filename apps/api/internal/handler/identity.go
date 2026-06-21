@@ -5,25 +5,23 @@ import (
 
 	"ecommerce/apps/api/internal/middleware"
 	"ecommerce/modules/auth"
-	"ecommerce/modules/customer"
+	"ecommerce/modules/identity"
 	"ecommerce/packages/httpx"
 	"ecommerce/packages/types"
 
 	"github.com/go-chi/chi/v5"
 )
 
-const maxUploadMemory = 5 << 20 // 5 MB multipart buffer
-
-type CustomerHandler struct {
-	svc     customer.Service
+type IdentityHandler struct {
+	svc     identity.Service
 	authSvc auth.Service
 }
 
-func NewCustomerHandler(svc customer.Service, authSvc auth.Service) *CustomerHandler {
-	return &CustomerHandler{svc: svc, authSvc: authSvc}
+func NewIdentityHandler(svc identity.Service, authSvc auth.Service) *IdentityHandler {
+	return &IdentityHandler{svc: svc, authSvc: authSvc}
 }
 
-func (h *CustomerHandler) Routes(r chi.Router) {
+func (h *IdentityHandler) Routes(r chi.Router) {
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.RequireAuth(h.authSvc))
 		r.Get("/me", h.GetProfile)
@@ -31,23 +29,25 @@ func (h *CustomerHandler) Routes(r chi.Router) {
 	})
 }
 
-func (h *CustomerHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
-	customerID := middleware.GetCustomerID(r.Context())
-	if customerID == "" {
+func (h *IdentityHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetAuthIdentityID(r.Context())
+	if userID == "" {
 		httpx.Error(w, r, types.ErrUnauthorized)
 		return
 	}
-	c, err := h.svc.GetProfile(r.Context(), customerID)
+	u, err := h.svc.GetProfile(r.Context(), userID)
 	if err != nil {
 		httpx.Error(w, r, err)
 		return
 	}
-	httpx.JSON(w, r, http.StatusOK, httpx.Response("customer", c))
+	httpx.JSON(w, r, http.StatusOK, map[string]any{
+		"user": u,
+	})
 }
 
-func (h *CustomerHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
-	customerID := middleware.GetCustomerID(r.Context())
-	if customerID == "" {
+func (h *IdentityHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetAuthIdentityID(r.Context())
+	if userID == "" {
 		httpx.Error(w, r, types.ErrUnauthorized)
 		return
 	}
@@ -69,11 +69,13 @@ func (h *CustomerHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 		contentType = "image/jpeg"
 	}
 
-	c, err := h.svc.UploadAvatar(r.Context(), customerID, file, header.Size, contentType)
+	u, err := h.svc.UploadAvatar(r.Context(), userID, file, header.Size, contentType)
 	if err != nil {
 		httpx.Error(w, r, err)
 		return
 	}
 
-	httpx.JSON(w, r, http.StatusOK, httpx.Response("customer", c))
+	httpx.JSON(w, r, http.StatusOK, map[string]any{
+		"user": u,
+	})
 }

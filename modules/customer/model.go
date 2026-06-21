@@ -10,6 +10,7 @@ type Customer struct {
 	LastName    *string    `db:"last_name" json:"lastName"`
 	Phone       *string    `db:"phone" json:"phone"`
 	CompanyName *string    `db:"company_name" json:"companyName"`
+	AvatarURL   *string    `db:"avatar_url" json:"avatarUrl"`
 	HasAccount  bool       `db:"has_account" json:"hasAccount"`
 	Metadata    []byte     `db:"metadata" json:"-"`
 	CreatedAt   time.Time  `db:"created_at" json:"createdAt"`
@@ -46,4 +47,11 @@ type CustomerGroup struct {
 	CreatedBy *string   `db:"created_by" json:"createdBy"`
 	CreatedAt time.Time `db:"created_at" json:"createdAt"`
 	UpdatedAt time.Time `db:"updated_at" json:"updatedAt"`
+}
+
+type UpdateCustomerReq struct {
+	FirstName *string `json:"firstName"`
+	LastName  *string `json:"lastName"`
+	Phone     *string `json:"phone"`
+	Metadata  []byte  `json:"metadata"`
 }

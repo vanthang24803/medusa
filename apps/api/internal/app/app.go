@@ -13,6 +13,7 @@ import (
 	"ecommerce/packages/db"
 	"ecommerce/packages/events"
 	"ecommerce/packages/logger"
+	"ecommerce/packages/upload"
 
 	"ecommerce/modules/auth"
 	"ecommerce/modules/brand"
@@ -84,12 +85,26 @@ func newEventBus(cfg *config.Config, log *zap.Logger, lc fx.Lifecycle) events.Ev
 	return bus
 }
 
-func wireModules(database *db.DB, bus events.EventBus, cfg *config.Config) *server.Modules {
+func wireModules(database *db.DB, bus events.EventBus, cfg *config.Config, log *zap.Logger) *server.Modules {
+	uploader, err := upload.NewUploader(upload.Config{
+		Provider:        upload.ProviderType(cfg.UploadProvider),
+		Endpoint:        cfg.UploadEndpoint,
+		Region:          cfg.UploadRegion,
+		AccessKeyID:     cfg.UploadAccessKey,
+		SecretAccessKey: cfg.UploadSecretKey,
+		UseSSL:          cfg.UploadSSL,
+		PublicURL:       cfg.UploadPublicURL,
+	})
+	if err != nil {
+		log.Warn("upload provider unavailable; avatar uploads disabled", zap.Error(err))
+		uploader = upload.NewNopUploader()
+	}
+
 	custRepo := customer.NewRepository(database)
 	return &server.Modules{
 		Auth:         auth.NewService(auth.NewRepository(database), custRepo, bus, cfg.JWTSecret),
-		Identity:     identity.NewService(identity.NewRepository(database), bus),
-		Customer:     customer.NewService(custRepo, bus),
+		Identity:     identity.NewService(identity.NewRepository(database), bus, uploader),
+		Customer:     customer.NewService(custRepo, bus, uploader),
 		Brand:        brand.NewService(brand.NewRepository(database), bus),
 		Product:      product.NewService(product.NewRepository(database), bus),
 		Pricing:      pricing.NewService(pricing.NewRepository(database), bus),

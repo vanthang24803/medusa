@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"ecommerce/packages/config"
 	"ecommerce/packages/migrate"
@@ -16,7 +16,7 @@ import (
 func main() {
 	cfg := config.Load()
 
-	conn, err := sql.Open("postgres", cfg.DatabaseURL)
+	conn, err := sql.Open("pgx", cfg.DatabaseURL)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "open db:", err)
 		os.Exit(1)

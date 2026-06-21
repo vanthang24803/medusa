@@ -2,7 +2,10 @@ package upload
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"mime"
+	"strings"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -39,6 +42,38 @@ type S3CompatibleUploader struct {
 	endpoint  string
 	useSSL    bool
 	publicURL string
+}
+
+// nopUploader is a no-op uploader returned when the configured provider is unavailable.
+type nopUploader struct{}
+
+func NewNopUploader() Uploader { return &nopUploader{} }
+
+func (*nopUploader) Upload(_ context.Context, _, _ string, _ io.Reader, _ int64, _ string) (string, error) {
+	return "", fmt.Errorf("upload provider not configured")
+}
+
+// ExtFromContentType returns a file extension for the given MIME type.
+func ExtFromContentType(ct string) string {
+	mt, _, _ := mime.ParseMediaType(ct)
+	switch strings.ToLower(mt) {
+	case "image/png":
+		return ".png"
+	case "image/webp":
+		return ".webp"
+	case "image/gif":
+		return ".gif"
+	default:
+		return ".jpg"
+	}
+}
+
+// ValidateSize returns an error if size exceeds maxBytes.
+func ValidateSize(size, maxBytes int64) error {
+	if size > maxBytes {
+		return fmt.Errorf("file size %d bytes exceeds limit of %d bytes", size, maxBytes)
+	}
+	return nil
 }
 
 // NewUploader is a Factory function to create the corresponding uploader without changing business code.

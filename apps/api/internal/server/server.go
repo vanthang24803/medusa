@@ -66,7 +66,7 @@ func New(log *zap.Logger, mods *Modules) http.Handler {
 	})
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		httpx.JSON(w, r, http.StatusOK, map[string]string{"status": "ok"})
+		httpx.JSON(w, r, http.StatusOK, httpx.Response("status", "ok"))
 	})
 
 	r.Handle("/docs/*", http.StripPrefix("/docs/", http.FileServer(http.Dir("docs"))))
@@ -75,6 +75,7 @@ func New(log *zap.Logger, mods *Modules) http.Handler {
 		routes := map[string]func(chi.Router){
 			"/auth":      handler.NewAuthHandler(mods.Auth).Routes,
 			"/customers": handler.NewCustomerHandler(mods.Customer, mods.Auth).Routes,
+			"/identity":  handler.NewIdentityHandler(mods.Identity, mods.Auth).Routes,
 			"/products":  handler.NewProductHandler(mods.Product).Routes,
 			"/brands":    handler.NewBrandHandler(mods.Brand).Routes,
 		}
